@@ -42,6 +42,12 @@
           description = "Cloudflare Tunnel for routing external traffic to Bureau services via connector token";
           inherits = [ "bureau/template:base-networked" ];
           command = [ "${pkgs.cloudflared}/bin/cloudflared" "tunnel" "run" ];
+          # The environment store path is bind-mounted into the sandbox
+          # at /nix/store (read-only), and its bin/ is prepended to PATH.
+          # cloudflared is dynamically linked (glibc, etc.), so the full
+          # Nix closure must be available — a single-binary bind-mount
+          # is not sufficient.
+          environment = "${pkgs.cloudflared}";
         };
       }
     );
