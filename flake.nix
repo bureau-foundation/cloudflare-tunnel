@@ -48,6 +48,14 @@
           # Nix closure must be available — a single-binary bind-mount
           # is not sufficient.
           environment = "${pkgs.cloudflared}";
+          # TUNNEL_TOKEN from the encrypted credential bundle is injected
+          # as an environment variable at sandbox creation time. The token
+          # value never appears in plaintext Matrix state events — it
+          # lives only in the age-encrypted m.bureau.credentials event,
+          # decrypted by the launcher's private key.
+          secrets = [
+            { key = "TUNNEL_TOKEN"; env = "TUNNEL_TOKEN"; }
+          ];
         };
       }
     );

@@ -51,31 +51,33 @@ state event. The command path resolves to a full `/nix/store/...` path. The
 daemon prefetches missing store paths from the binary cache before creating the
 sandbox.
 
-### 3. Deploy the principal
+### 3. Deploy the service
 
-Create a `PrincipalAssignment` state event in your machine's config room:
+```bash
+bureau service create bureau/template:cloudflare-tunnel \
+    --machine machine/<your-machine> \
+    --name service/tunnel/cloudflare \
+    --credential-file ./creds \
+    --extra-credential "TUNNEL_TOKEN=<your-tunnel-token>"
+```
+
+The template declares `TUNNEL_TOKEN` as a secret binding. The `--extra-credential`
+flag adds it to the age-encrypted credential bundle published to the machine's
+config room. The launcher decrypts the bundle at sandbox creation time and injects
+the token as an environment variable — the plaintext value never appears in Matrix
+state events.
+
+To mount service sockets into the tunnel's sandbox (e.g., for routing traffic to
+a forge service), set `required_services_override` on the principal assignment:
 
 ```json
 {
-    "type": "m.bureau.principal_assignment",
-    "state_key": "<principal-name>",
-    "content": {
-        "principal": "@<fleet>/agent/<name>:<server>",
-        "template": "<template-room>:cloudflare-tunnel",
-        "auto_start": true,
-        "extra_environment_variables": {
-            "TUNNEL_TOKEN": "<your-tunnel-token>"
-        },
-        "required_services_override": ["forge/github:http"]
-    }
+    "required_services_override": ["forge/github:http"]
 }
 ```
 
-- **`TUNNEL_TOKEN`**: the connector token from step 1. For production, deliver
-  via credential bundle instead of `extra_environment_variables`.
-- **`required_services_override`**: which service sockets to mount into the
-  sandbox. The template has no default RequiredServices — the operator
-  configures this per deployment.
+The template has no default RequiredServices — the operator configures this per
+deployment based on which services the tunnel routes to.
 
 ### 4. Configure Cloudflare ingress
 
@@ -90,7 +92,7 @@ that corresponds to the mounted service. cloudflared's ingress rules support
 ### 5. Verify
 
 ```bash
-bureau observe <principal-name>
+bureau observe service/tunnel/cloudflare
 curl https://webhooks.example.com/
 ```
 
